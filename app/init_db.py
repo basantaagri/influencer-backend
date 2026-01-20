@@ -1,11 +1,12 @@
 from app.db import get_db
+from datetime import datetime
 
 def init_db():
     conn = get_db()
     cur = conn.cursor()
 
     # -----------------------------
-    # INFLUENCERS (MAIN TABLE)
+    # TABLES
     # -----------------------------
     cur.execute("""
         CREATE TABLE IF NOT EXISTS influencers (
@@ -21,9 +22,6 @@ def init_db():
         )
     """)
 
-    # -----------------------------
-    # SAVED INFLUENCERS
-    # -----------------------------
     cur.execute("""
         CREATE TABLE IF NOT EXISTS saved_influencers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,9 +30,6 @@ def init_db():
         )
     """)
 
-    # -----------------------------
-    # ORDERS
-    # -----------------------------
     cur.execute("""
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,22 +42,23 @@ def init_db():
     """)
 
     # -----------------------------
-    # ONE-TIME SAFE SEED (ONLY IF EMPTY)
+    # SEED DEMO DATA (CRITICAL)
     # -----------------------------
     cur.execute("SELECT COUNT(*) FROM influencers")
     count = cur.fetchone()[0]
 
     if count == 0:
-        cur.execute("""
+        demo_data = [
+            ("techguru", "Instagram", "Tech", 120000, 4.2, 5000, "A"),
+            ("fashiondiary", "Instagram", "Fashion", 98000, 3.8, 4000, "B"),
+            ("fitlife", "YouTube", "Fitness", 210000, 5.1, 7000, "A"),
+        ]
+
+        cur.executemany("""
             INSERT INTO influencers
             (username, platform, niche, followers, engagement_rate, price, audit_score)
-            VALUES
-            ('FitLifeRiya', 'Instagram', 'Fitness', 120000, 3.9, 200, 'Medium'),
-            ('TechWithAman', 'YouTube', 'Technology', 98000, 4.5, 350, 'Low'),
-            ('DailyFinance', 'YouTube', 'Finance', 64000, 2.8, 300, 'High'),
-            ('StyleByNeha', 'Instagram', 'Fashion', 150000, 4.2, 400, 'Low'),
-            ('FoodieRaj', 'Instagram', 'Food', 82000, 3.6, 180, 'Medium')
-        """)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, demo_data)
 
     conn.commit()
     conn.close()
