@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # ROUTERS (EXISTING)
 # -------------------------------
 from app.routes import influencers, audit, orders, auth
+from app.routes import seed   # ✅ NEW (SAFE ADDITION)
 
 # -------------------------------
 # DB INIT (CRITICAL)
@@ -34,7 +35,7 @@ def on_startup():
     init_db()
 
 # -------------------------------------------------
-# ROUTES REGISTRATION (UNCHANGED)
+# ROUTES REGISTRATION (UNCHANGED + SAFE ADDITION)
 # -------------------------------------------------
 
 # ✅ Influencers
@@ -63,6 +64,13 @@ app.include_router(
     auth.router,
     prefix="/auth",
     tags=["Auth"]
+)
+
+# ✅ Seed (SAFE, OPTIONAL, MANUAL USE)
+app.include_router(
+    seed.router,
+    prefix="/seed",
+    tags=["Seed"]
 )
 
 # -------------------------------------------------
