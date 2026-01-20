@@ -46,5 +46,23 @@ def init_db():
         )
     """)
 
+    # -----------------------------
+    # ONE-TIME SAFE SEED (ONLY IF EMPTY)
+    # -----------------------------
+    cur.execute("SELECT COUNT(*) FROM influencers")
+    count = cur.fetchone()[0]
+
+    if count == 0:
+        cur.execute("""
+            INSERT INTO influencers
+            (username, platform, niche, followers, engagement_rate, price, audit_score)
+            VALUES
+            ('FitLifeRiya', 'Instagram', 'Fitness', 120000, 3.9, 200, 'Medium'),
+            ('TechWithAman', 'YouTube', 'Technology', 98000, 4.5, 350, 'Low'),
+            ('DailyFinance', 'YouTube', 'Finance', 64000, 2.8, 300, 'High'),
+            ('StyleByNeha', 'Instagram', 'Fashion', 150000, 4.2, 400, 'Low'),
+            ('FoodieRaj', 'Instagram', 'Food', 82000, 3.6, 180, 'Medium')
+        """)
+
     conn.commit()
     conn.close()
