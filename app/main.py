@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # -------------------------------
-# ROUTERS (EXISTING)
+# ROUTERS
 # -------------------------------
-from app.routes import influencers, audit, orders, auth
+from app.routes import influencers, audit, orders, auth, seed
 
 # -------------------------------
-# DB INIT (CRITICAL)
+# DB INIT
 # -------------------------------
 from app.init_db import init_db
 
@@ -16,7 +16,7 @@ app = FastAPI(
 )
 
 # -------------------------------------------------
-# CORS (SAFE, REQUIRED FOR FRONTEND)
+# CORS (REQUIRED FOR FRONTEND)
 # -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
@@ -27,42 +27,44 @@ app.add_middleware(
 )
 
 # -------------------------------------------------
-# DATABASE LIFECYCLE (NON-NEGOTIABLE)
+# DATABASE LIFECYCLE
 # -------------------------------------------------
 @app.on_event("startup")
 def on_startup():
     init_db()
 
 # -------------------------------------------------
-# ROUTES REGISTRATION (UNCHANGED)
+# ROUTES
 # -------------------------------------------------
 
-# ✅ Influencers
 app.include_router(
     influencers.router,
     prefix="/influencers",
     tags=["Influencers"]
 )
 
-# ✅ Audit
 app.include_router(
     audit.router,
     prefix="/audit",
     tags=["Audit"]
 )
 
-# ✅ Orders
 app.include_router(
     orders.router,
     prefix="/orders",
     tags=["Orders"]
 )
 
-# ✅ Auth
 app.include_router(
     auth.router,
     prefix="/auth",
     tags=["Auth"]
+)
+
+# ✅ SEED ROUTE (MANUAL, SAFE)
+app.include_router(
+    seed.router,
+    tags=["Seed"]
 )
 
 # -------------------------------------------------
