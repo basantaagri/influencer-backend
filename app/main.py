@@ -65,7 +65,7 @@ app.include_router(
     tags=["Auth"]
 )
 
-# Seed (MANUAL, ONE-TIME USE)
+# ✅ SEED (MANUAL, ONE-TIME USE)
 app.include_router(
     seed.router,
     tags=["Seed"]
