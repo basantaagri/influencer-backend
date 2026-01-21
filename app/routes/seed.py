@@ -1,31 +1,43 @@
-from fastapi import APIRouter
-from app.db import get_db
+from fastapi import APIRouter, HTTPException
+from app.db import get_supabase
 
 router = APIRouter()
 
 @router.post("/seed")
 def seed_influencers():
-    conn = get_db()
-    cur = conn.cursor()
+    supabase = get_supabase()
 
-    demo = [
-        ("tech_guru", "Instagram", "Tech", 120000, 4.2, 5000, "A"),
-        ("fashion_diva", "Instagram", "Fashion", 98000, 3.8, 4500, "B"),
-        ("finance_bro", "Twitter", "Finance", 65000, 5.1, 6000, "A"),
+    data = [
+        {
+            "username": "tech_guru",
+            "platform": "Instagram",
+            "niche": "Tech",
+            "followers": 120000,
+            "engagement_rate": 4.2,
+            "price": 5000,
+            "audit_score": "A",
+        },
+        {
+            "username": "fashion_diva",
+            "platform": "Instagram",
+            "niche": "Fashion",
+            "followers": 98000,
+            "engagement_rate": 3.8,
+            "price": 4500,
+            "audit_score": "B",
+        },
     ]
 
-    for d in demo:
-        cur.execute(
-            """
-            INSERT INTO influencers
-            (username, platform, niche, followers, engagement_rate, price, audit_score)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """,
-            d
+    res = supabase.table("influencers").insert(data).execute()
+
+    # ✅ NEW supabase-py behavior
+    if not res.data:
+        raise HTTPException(
+            status_code=500,
+            detail="Insert failed (no data returned from Supabase)",
         )
 
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    return {"status": "seeded"}
+    return {
+        "status": "seeded",
+        "count": len(res.data),
+    }

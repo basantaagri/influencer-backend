@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import seed
+from app.routes import influencers, seed
 
 app = FastAPI(title="Influencer Discovery & Audit")
 
@@ -12,6 +12,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(influencers.router, prefix="/influencers", tags=["Influencers"])
 app.include_router(seed.router, tags=["Seed"])
 
 @app.get("/")
