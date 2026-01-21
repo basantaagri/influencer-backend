@@ -1,8 +1,12 @@
 from . import influencers
 from . import seed
 
-# TEMP DISABLED (old DB-based routes)
+# ------------------------------------
+# TEMPORARILY DISABLED ROUTES
+# (Old DB / psycopg based implementations)
+# ------------------------------------
 # from . import orders
 # from . import auth
 # from . import saved
 # from . import audit
+
