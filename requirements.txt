@@ -2,3 +2,4 @@ fastapi
 uvicorn
 python-dotenv
 python-jose
+psycopg2-binary==2.9.9
