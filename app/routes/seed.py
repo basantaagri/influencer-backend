@@ -25,6 +25,7 @@ def seed_influencers():
         )
 
     conn.commit()
+    cur.close()
     conn.close()
 
     return {"status": "seeded"}
