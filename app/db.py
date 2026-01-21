@@ -1,19 +1,16 @@
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-
-# -------------------------------------------------
-# DATABASE CONNECTION (SUPABASE POSTGRES)
-# -------------------------------------------------
+import psycopg
+from psycopg.rows import dict_row
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable is not set")
-
 def get_db():
-    conn = psycopg2.connect(
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL not set")
+
+    conn = psycopg.connect(
         DATABASE_URL,
-        cursor_factory=RealDictCursor
+        row_factory=dict_row,
+        autocommit=False
     )
     return conn

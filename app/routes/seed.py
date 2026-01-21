@@ -14,14 +14,15 @@ def seed_influencers():
         ("finance_bro", "Twitter", "Finance", 65000, 5.1, 6000, "A"),
     ]
 
-    cur.executemany(
-        """
-        INSERT INTO influencers
-        (username, platform, niche, followers, engagement_rate, price, audit_score)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """,
-        demo
-    )
+    for d in demo:
+        cur.execute(
+            """
+            INSERT INTO influencers
+            (username, platform, niche, followers, engagement_rate, price, audit_score)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            d
+        )
 
     conn.commit()
     cur.close()

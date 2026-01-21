@@ -1,23 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# -------------------------------
+# ------------------------------------
 # ROUTERS
-# -------------------------------
+# ------------------------------------
 from app.routes import influencers, audit, orders, auth, seed
 
-# -------------------------------
+# ------------------------------------
 # DB INIT
-# -------------------------------
+# ------------------------------------
 from app.init_db import init_db
 
 app = FastAPI(
     title="Influencer Discovery & Audit"
 )
 
-# -------------------------------------------------
+# ------------------------------------
 # CORS (REQUIRED FOR FRONTEND)
-# -------------------------------------------------
+# ------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,16 +26,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -------------------------------------------------
+# ------------------------------------
 # DATABASE LIFECYCLE
-# -------------------------------------------------
+# ------------------------------------
 @app.on_event("startup")
 def on_startup():
     init_db()
 
-# -------------------------------------------------
+# ------------------------------------
 # ROUTES
-# -------------------------------------------------
+# ------------------------------------
 
 # Influencers
 app.include_router(
@@ -65,15 +65,15 @@ app.include_router(
     tags=["Auth"]
 )
 
-# ✅ SEED (MANUAL, ONE-TIME USE)
+# ✅ Seed (MANUAL, ONE-TIME USE)
 app.include_router(
     seed.router,
     tags=["Seed"]
 )
 
-# -------------------------------------------------
+# ------------------------------------
 # HEALTH CHECK
-# -------------------------------------------------
+# ------------------------------------
 @app.get("/")
 def root():
     return {"status": "Backend running"}
