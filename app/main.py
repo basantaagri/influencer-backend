@@ -37,31 +37,35 @@ def on_startup():
 # ROUTES
 # -------------------------------------------------
 
+# Influencers
 app.include_router(
     influencers.router,
     prefix="/influencers",
     tags=["Influencers"]
 )
 
+# Audit
 app.include_router(
     audit.router,
     prefix="/audit",
     tags=["Audit"]
 )
 
+# Orders
 app.include_router(
     orders.router,
     prefix="/orders",
     tags=["Orders"]
 )
 
+# Auth
 app.include_router(
     auth.router,
     prefix="/auth",
     tags=["Auth"]
 )
 
-# ✅ SEED ROUTE (MANUAL, SAFE)
+# Seed (MANUAL, ONE-TIME USE)
 app.include_router(
     seed.router,
     tags=["Seed"]
