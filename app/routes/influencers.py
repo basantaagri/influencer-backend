@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from app.db import get_supabase
 
-router = APIRouter()
+router = APIRouter(prefix="/influencers", tags=["Influencers"])
 
 # -------------------------------------------------
-# GET /influencers/
+# GET /influencers
 # List influencers with optional filters + pagination
 # RETURNS PURE ARRAY (frontend-safe)
 # -------------------------------------------------
@@ -15,7 +15,7 @@ def list_influencers(
     niche: Optional[str] = Query(None),
     min_followers: Optional[int] = Query(None, ge=0),
 
-    # 🔹 Pagination (SAFE ADDITION)
+    # Pagination
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=50),
 ):
@@ -26,10 +26,11 @@ def list_influencers(
 
     query = supabase.table("influencers").select("*")
 
-    if platform:
+    # ✅ IGNORE "All" FILTERS (CRITICAL FIX)
+    if platform and platform != "All":
         query = query.eq("platform", platform)
 
-    if niche:
+    if niche and niche != "All":
         query = query.eq("niche", niche)
 
     if min_followers is not None:
@@ -37,13 +38,12 @@ def list_influencers(
 
     res = query.range(offset, offset + limit - 1).execute()
 
-    # ⚠️ DO NOT WRAP RESPONSE
-    # Frontend expects ARRAY only
+    # Frontend expects ARRAY ONLY
     return res.data or []
 
 
 # -------------------------------------------------
-# POST /influencers/
+# POST /influencers
 # Create a new influencer
 # -------------------------------------------------
 @router.post("/")

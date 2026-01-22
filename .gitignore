@@ -1,6 +1,16 @@
-venv/
-.env
-*.db
-*.sqlite
+# python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# virtual env
+venv/
+.env
+
+# editor
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
