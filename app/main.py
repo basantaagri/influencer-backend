@@ -1,20 +1,50 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import influencers, seed
 
-app = FastAPI(title="Influencer Discovery & Audit")
+# ------------------------------------
+# ROUTERS (LOCKED)
+# ------------------------------------
+from app.routes import seed, influencers
 
+# ------------------------------------
+# APP INIT
+# ------------------------------------
+app = FastAPI(
+    title="Influencer Platform Backend",
+    version="1.0.0"
+)
+
+# ------------------------------------
+# CORS (SAFE DEFAULT)
+# ------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # tighten later if needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(influencers.router, prefix="/influencers", tags=["Influencers"])
-app.include_router(seed.router, tags=["Seed"])
+# ------------------------------------
+# ROUTES
+# ------------------------------------
 
+# ✅ Influencers (CORE)
+app.include_router(
+    influencers.router,
+    prefix="/influencers",
+    tags=["Influencers"]
+)
+
+# ✅ Seed (MANUAL / ONE-TIME)
+app.include_router(
+    seed.router,
+    tags=["Seed"]
+)
+
+# ------------------------------------
+# HEALTH CHECKS
+# ------------------------------------
 @app.get("/")
 def root():
     return {"status": "Backend running"}
