@@ -17,19 +17,20 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
     )
 
 # -------------------------------------------------
-# SUPABASE CLIENT (HTTP ONLY — NO DB SOCKETS)
+# SUPABASE CLIENT (HTTP ONLY — SAFE FOR RENDER)
 # -------------------------------------------------
-supabase: Client = create_client(
+_supabase: Client = create_client(
     SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY
 )
 
 # -------------------------------------------------
-# EXPORT CLIENT
+# EXPORT CLIENT ACCESSOR
 # -------------------------------------------------
 def get_supabase() -> Client:
     """
     Returns a singleton Supabase client.
-    Uses HTTP API (safe for Render Free & local).
+    Uses HTTP API only (NO database sockets).
+    Safe for Render Free & Production.
     """
-    return supabase
+    return _supabase
