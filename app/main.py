@@ -4,7 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 # ------------------------------------
 # ROUTERS (LOCKED)
 # ------------------------------------
-from app.routes import seed, influencers
+from app.routes import influencers, audit
+from app.routes import saved, reveal, credits
+# from app.routes import seed  # ❌ DISABLED IN PRODUCTION
 
 # ------------------------------------
 # APP INIT
@@ -29,21 +31,41 @@ app.add_middleware(
 # ROUTES
 # ------------------------------------
 
-# ✅ Influencers (CORE)
+# ✅ Influencers (CORE – PUBLIC)
 app.include_router(
     influencers.router,
     prefix="/influencers",
     tags=["Influencers"]
 )
 
-# ✅ Seed (MANUAL / ONE-TIME)
+# ✅ Saved Influencers (JWT PROTECTED)
 app.include_router(
-    seed.router,
-    tags=["Seed"]
+    saved.router
+)
+
+# ✅ Reveal Influencer (JWT PROTECTED)
+app.include_router(
+    reveal.router
+)
+
+# ✅ Credits (JWT PROTECTED)
+app.include_router(
+    credits.router
+)
+
+# 🔒 Seed DISABLED (SECURITY)
+# app.include_router(
+#     seed.router,
+#     tags=["Seed"]
+# )
+
+# ✅ Audit (SAFE / STUBBED)
+app.include_router(
+    audit.router
 )
 
 # ------------------------------------
-# HEALTH CHECKS
+# HEALTH & AUTH CHECKS (REQUIRED)
 # ------------------------------------
 @app.get("/")
 def root():
@@ -52,3 +74,16 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+@app.get("/auth/me")
+def auth_me():
+    """
+    TEMP SAFE STUB
+    Frontend expects this endpoint.
+    Real JWT logic can be added later.
+    """
+    return {
+        "id": None,
+        "email": None,
+        "role": "guest"
+    }

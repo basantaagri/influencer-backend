@@ -1,37 +1,46 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from app.db import get_db
+from app.auth import get_current_user
 
-router = APIRouter()
+router = APIRouter(prefix="/saved", tags=["Saved"])
 
 # --------------------------------
-# GET ALL SAVED INFLUENCERS
+# GET ALL SAVED INFLUENCERS (USER-SCOPED)
 # --------------------------------
 @router.get("/")
-def get_saved():
+def get_saved(user_id: str = Depends(get_current_user)):
     conn = get_db()
     rows = conn.execute(
         """
         SELECT influencer_id, created_at
         FROM saved_influencers
+        WHERE user_id = ?
         ORDER BY created_at DESC
-        """
+        """,
+        (user_id,)
     ).fetchall()
     conn.close()
 
     return [dict(row) for row in rows]
 
 # --------------------------------
-# SAVE INFLUENCER
+# SAVE INFLUENCER (JWT PROTECTED)
 # --------------------------------
 @router.post("/{influencer_id}")
-def save_influencer(influencer_id: int):
+def save_influencer(
+    influencer_id: int,
+    user_id: str = Depends(get_current_user)
+):
     conn = get_db()
 
-    # Prevent duplicates
+    # Prevent duplicates (PER USER)
     exists = conn.execute(
-        "SELECT 1 FROM saved_influencers WHERE influencer_id = ?",
-        (influencer_id,)
+        """
+        SELECT 1 FROM saved_influencers
+        WHERE influencer_id = ? AND user_id = ?
+        """,
+        (influencer_id, user_id)
     ).fetchone()
 
     if exists:
@@ -40,10 +49,10 @@ def save_influencer(influencer_id: int):
 
     conn.execute(
         """
-        INSERT INTO saved_influencers (influencer_id, created_at)
-        VALUES (?, ?)
+        INSERT INTO saved_influencers (user_id, influencer_id, created_at)
+        VALUES (?, ?, ?)
         """,
-        (influencer_id, datetime.utcnow().isoformat())
+        (user_id, influencer_id, datetime.utcnow().isoformat())
     )
     conn.commit()
     conn.close()
@@ -51,14 +60,20 @@ def save_influencer(influencer_id: int):
     return {"status": "saved"}
 
 # --------------------------------
-# REMOVE SAVED INFLUENCER
+# REMOVE SAVED INFLUENCER (JWT PROTECTED)
 # --------------------------------
 @router.delete("/{influencer_id}")
-def remove_saved(influencer_id: int):
+def remove_saved(
+    influencer_id: int,
+    user_id: str = Depends(get_current_user)
+):
     conn = get_db()
     cur = conn.execute(
-        "DELETE FROM saved_influencers WHERE influencer_id = ?",
-        (influencer_id,)
+        """
+        DELETE FROM saved_influencers
+        WHERE influencer_id = ? AND user_id = ?
+        """,
+        (influencer_id, user_id)
     )
     conn.commit()
     conn.close()

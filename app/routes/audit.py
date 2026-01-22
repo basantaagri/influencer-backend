@@ -12,6 +12,7 @@ router = APIRouter(
 
 # -------------------------------------------------
 # GET AUDIT BY INFLUENCER ID
+# SAFE: Uses stubbed values for now
 # -------------------------------------------------
 
 @router.get("/{influencer_id}")

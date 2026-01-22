@@ -14,10 +14,15 @@ def list_influencers(
     platform: Optional[str] = Query(None),
     niche: Optional[str] = Query(None),
     min_followers: Optional[int] = Query(None, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+
+    # 🔹 Pagination (SAFE ADDITION)
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=50),
 ):
     supabase = get_supabase()
+
+    offset = (page - 1) * per_page
+    limit = per_page
 
     query = supabase.table("influencers").select("*")
 
@@ -32,8 +37,8 @@ def list_influencers(
 
     res = query.range(offset, offset + limit - 1).execute()
 
-    # supabase-py v2: errors raise automatically
-    # frontend expects ARRAY, not wrapped object
+    # ⚠️ DO NOT WRAP RESPONSE
+    # Frontend expects ARRAY only
     return res.data or []
 
 
@@ -125,7 +130,7 @@ def update_influencer(influencer_id: int, payload: dict):
 def delete_influencer(influencer_id: int):
     supabase = get_supabase()
 
-    res = (
+    (
         supabase
         .table("influencers")
         .delete()

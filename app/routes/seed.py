@@ -1,8 +1,13 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from app.db import get_supabase
 
 router = APIRouter()
 
+# -------------------------------------------------
+# POST /seed
+# DEV-ONLY: Seed influencers (IDEMPOTENT)
+# Uses UPSERT on username to avoid duplicates
+# -------------------------------------------------
 @router.post("/seed")
 def seed_influencers():
     supabase = get_supabase()
@@ -15,7 +20,8 @@ def seed_influencers():
             "followers": 120000,
             "engagement_rate": 4.2,
             "price": 5000,
-            "audit_score": "A",
+            "audit_score": 82,  # ✅ NUMERIC (SAFE)
+            "profile_url": "https://instagram.com/tech_guru",
         },
         {
             "username": "fashion_diva",
@@ -24,20 +30,30 @@ def seed_influencers():
             "followers": 98000,
             "engagement_rate": 3.8,
             "price": 4500,
-            "audit_score": "B",
+            "audit_score": 76,  # ✅ NUMERIC (SAFE)
+            "profile_url": "https://instagram.com/fashion_diva",
         },
     ]
 
-    res = supabase.table("influencers").insert(data).execute()
-
-    # ✅ NEW supabase-py behavior
-    if not res.data:
-        raise HTTPException(
-            status_code=500,
-            detail="Insert failed (no data returned from Supabase)",
+    # ✅ CRITICAL FIX — DO NOT CHANGE
+    # Idempotent upsert prevents duplicate rows forever
+    res = (
+        supabase
+        .table("influencers")
+        .upsert(
+            data,
+            on_conflict="username"
         )
+        .execute()
+    )
+
+    if res.error:
+        return {
+            "status": "error",
+            "message": res.error.message,
+        }
 
     return {
         "status": "seeded",
-        "count": len(res.data),
+        "count": len(data),
     }
