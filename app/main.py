@@ -4,8 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 # ------------------------------------
 # ROUTERS (LOCKED)
 # ------------------------------------
-from app.routes import influencers, audit
-from app.routes import saved, reveal, credits
+from app.routes import influencers
+from app.routes import audit
+from app.routes import saved
+from app.routes import reveal
+from app.routes import credits
 # from app.routes import seed  # ❌ DISABLED IN PRODUCTION
 
 # ------------------------------------
@@ -13,7 +16,7 @@ from app.routes import saved, reveal, credits
 # ------------------------------------
 app = FastAPI(
     title="Influencer Platform Backend",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # ------------------------------------
@@ -35,33 +38,33 @@ app.add_middleware(
 app.include_router(
     influencers.router,
     prefix="/influencers",
-    tags=["Influencers"]
+    tags=["Influencers"],
 )
 
 # ✅ Saved Influencers (JWT PROTECTED)
 app.include_router(
-    saved.router
+    saved.router,
 )
 
 # ✅ Reveal Influencer (JWT PROTECTED)
 app.include_router(
-    reveal.router
+    reveal.router,
 )
 
 # ✅ Credits (JWT PROTECTED)
 app.include_router(
-    credits.router
+    credits.router,
 )
 
 # 🔒 Seed DISABLED (SECURITY)
 # app.include_router(
 #     seed.router,
-#     tags=["Seed"]
+#     tags=["Seed"],
 # )
 
 # ✅ Audit (SAFE / STUBBED)
 app.include_router(
-    audit.router
+    audit.router,
 )
 
 # ------------------------------------
@@ -71,9 +74,11 @@ app.include_router(
 def root():
     return {"status": "Backend running"}
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 @app.get("/auth/me")
 def auth_me():
@@ -85,5 +90,5 @@ def auth_me():
     return {
         "id": None,
         "email": None,
-        "role": "guest"
+        "role": "guest",
     }
