@@ -1,95 +1,106 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from datetime import datetime
-from app.db import get_db
-from app.utils.auth import (
-    hash_password,
-    verify_password,
-    create_access_token
+from app.db import get_supabase
+from app.auth import create_access_token, get_current_user
+
+router = APIRouter(
+    prefix="/auth",
+    tags=["Auth"]
 )
 
-router = APIRouter()
-
-
-# --------------------------------
-# REQUEST SCHEMAS
-# --------------------------------
-class RegisterBody(BaseModel):
+# -----------------------------
+# REQUEST MODELS
+# -----------------------------
+class RegisterRequest(BaseModel):
     email: str
     password: str
-    role: str  # brand | influencer
+    role: str
 
-
-class LoginBody(BaseModel):
+class LoginRequest(BaseModel):
     email: str
     password: str
 
-
-# --------------------------------
+# -----------------------------
 # REGISTER
-# --------------------------------
+# -----------------------------
 @router.post("/register")
-def register(data: RegisterBody):
-    db = get_db()
-    cur = db.cursor()
+def register(data: RegisterRequest):
+    supabase = get_supabase()
 
-    try:
-        cur.execute(
-            """
-            INSERT INTO users (email, password_hash, role, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                data.email,
-                hash_password(data.password),
-                data.role,
-                datetime.utcnow().isoformat(),
-            ),
-        )
-        db.commit()
-    except Exception:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="User exists"
-        )
-
-    db.close()
-    return {"status": "registered"}
-
-
-# --------------------------------
-# LOGIN (BCRYPT SAFE — FINAL)
-# --------------------------------
-@router.post("/login")
-def login(data: LoginBody):
-    db = get_db()
-    cur = db.cursor()
-
-    cur.execute(
-        """
-        SELECT id, password_hash, role
-        FROM users
-        WHERE email = ?
-        """,
-        (data.email,),
+    # Check if user exists
+    existing = (
+        supabase
+        .table("users")
+        .select("id")
+        .eq("email", data.email)
+        .limit(1)
+        .execute()
     )
-    user = cur.fetchone()
-    db.close()
 
-    # ❌ no plaintext comparison
-    if not user or not verify_password(data.password, user[1]):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials"
-        )
+    if existing.data:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    # Insert user
+    response = (
+        supabase
+        .table("users")
+        .insert({
+            "email": data.email,
+            "password": data.password,  # 🔒 hash later
+            "role": data.role
+        })
+        .execute()
+    )
+
+    user = response.data[0]
 
     token = create_access_token({
-        "user_id": user[0],
-        "role": user[2]
+        "id": user["id"],
+        "email": user["email"],
+        "role": user["role"]
     })
 
     return {
         "access_token": token,
-        "role": user[2],
+        "token_type": "bearer"
     }
+
+# -----------------------------
+# LOGIN
+# -----------------------------
+@router.post("/login")
+def login(data: LoginRequest):
+    supabase = get_supabase()
+
+    response = (
+        supabase
+        .table("users")
+        .select("*")
+        .eq("email", data.email)
+        .eq("password", data.password)
+        .limit(1)
+        .execute()
+    )
+
+    if not response.data:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    user = response.data[0]
+
+    token = create_access_token({
+        "id": user["id"],
+        "email": user["email"],
+        "role": user["role"]
+    })
+
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
+
+# -----------------------------
+# CURRENT USER
+# -----------------------------
+@router.get("/me")
+def me(user=Depends(get_current_user)):
+    return user
