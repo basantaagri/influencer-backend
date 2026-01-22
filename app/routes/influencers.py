@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional, List
+from typing import Optional
 from app.db import get_supabase
 
 router = APIRouter()
 
 # -------------------------------------------------
-# GET /influencers
+# GET /influencers/
 # List influencers with optional filters + pagination
+# RETURNS PURE ARRAY (frontend-safe)
 # -------------------------------------------------
 @router.get("/")
 def list_influencers(
@@ -26,24 +27,18 @@ def list_influencers(
     if niche:
         query = query.eq("niche", niche)
 
-    if min_followers:
+    if min_followers is not None:
         query = query.gte("followers", min_followers)
 
     res = query.range(offset, offset + limit - 1).execute()
 
-    if res.error:
-        raise HTTPException(status_code=400, detail=res.error.message)
-
-    return {
-        "count": len(res.data),
-        "items": res.data,
-        "offset": offset,
-        "limit": limit,
-    }
+    # supabase-py v2: errors raise automatically
+    # frontend expects ARRAY, not wrapped object
+    return res.data or []
 
 
 # -------------------------------------------------
-# POST /influencers
+# POST /influencers/
 # Create a new influencer
 # -------------------------------------------------
 @router.post("/")
@@ -69,12 +64,9 @@ def create_influencer(payload: dict):
 
     res = supabase.table("influencers").insert(payload).execute()
 
-    if res.error:
-        raise HTTPException(status_code=400, detail=res.error.message)
-
     return {
         "status": "created",
-        "data": res.data[0],
+        "data": res.data[0] if res.data else None,
     }
 
 
@@ -95,7 +87,7 @@ def get_influencer(influencer_id: int):
         .execute()
     )
 
-    if res.error:
+    if not res.data:
         raise HTTPException(status_code=404, detail="Influencer not found")
 
     return res.data
@@ -120,12 +112,9 @@ def update_influencer(influencer_id: int, payload: dict):
         .execute()
     )
 
-    if res.error:
-        raise HTTPException(status_code=400, detail=res.error.message)
-
     return {
         "status": "updated",
-        "updated_rows": len(res.data),
+        "updated_rows": len(res.data or []),
     }
 
 
@@ -143,8 +132,5 @@ def delete_influencer(influencer_id: int):
         .eq("id", influencer_id)
         .execute()
     )
-
-    if res.error:
-        raise HTTPException(status_code=400, detail=res.error.message)
 
     return {"status": "deleted"}
