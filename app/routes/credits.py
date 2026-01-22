@@ -1,18 +1,20 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.auth import get_current_user
-from app.db import supabase
+from app.db import get_supabase
 
 router = APIRouter(
     prefix="/credits",
     tags=["Credits"]
 )
 
-# --------------------------------------------------
-# GET USER CREDITS (JWT PROTECTED)
-# --------------------------------------------------
+# ------------------------------------
+# GET USER CREDITS
+# ------------------------------------
 @router.get("/")
 def get_credits(user_id: str = Depends(get_current_user)):
-    result = (
+    supabase = get_supabase()
+
+    res = (
         supabase
         .table("users")
         .select("credits")
@@ -21,11 +23,9 @@ def get_credits(user_id: str = Depends(get_current_user)):
         .execute()
     )
 
-    # Defensive fallback — never break frontend
-    credits = 0
-    if result and result.data and "credits" in result.data:
-        credits = result.data["credits"]
+    if not res or not res.data:
+        raise HTTPException(status_code=404, detail="User not found")
 
     return {
-        "credits": credits
+        "credits": res.data.get("credits", 0)
     }
