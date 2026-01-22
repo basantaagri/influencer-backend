@@ -1,28 +1,30 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
-from app.db import get_db
 from app.auth import get_current_user
+from app.db import get_supabase
 
-router = APIRouter(prefix="/saved", tags=["Saved"])
+router = APIRouter(
+    prefix="/saved",
+    tags=["Saved"]
+)
 
 # --------------------------------
 # GET ALL SAVED INFLUENCERS (USER-SCOPED)
 # --------------------------------
 @router.get("/")
-def get_saved(user_id: str = Depends(get_current_user)):
-    conn = get_db()
-    rows = conn.execute(
-        """
-        SELECT influencer_id, created_at
-        FROM saved_influencers
-        WHERE user_id = ?
-        ORDER BY created_at DESC
-        """,
-        (user_id,)
-    ).fetchall()
-    conn.close()
+def get_saved(user=Depends(get_current_user)):
+    supabase = get_supabase()
 
-    return [dict(row) for row in rows]
+    response = (
+        supabase
+        .table("saved_influencers")
+        .select("influencer_id, created_at")
+        .eq("user_id", user["id"])
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    return response.data or []
 
 # --------------------------------
 # SAVE INFLUENCER (JWT PROTECTED)
@@ -30,32 +32,29 @@ def get_saved(user_id: str = Depends(get_current_user)):
 @router.post("/{influencer_id}")
 def save_influencer(
     influencer_id: int,
-    user_id: str = Depends(get_current_user)
+    user=Depends(get_current_user)
 ):
-    conn = get_db()
+    supabase = get_supabase()
 
     # Prevent duplicates (PER USER)
-    exists = conn.execute(
-        """
-        SELECT 1 FROM saved_influencers
-        WHERE influencer_id = ? AND user_id = ?
-        """,
-        (influencer_id, user_id)
-    ).fetchone()
+    exists = (
+        supabase
+        .table("saved_influencers")
+        .select("id")
+        .eq("user_id", user["id"])
+        .eq("influencer_id", influencer_id)
+        .limit(1)
+        .execute()
+    )
 
-    if exists:
-        conn.close()
+    if exists.data:
         return {"status": "already_saved"}
 
-    conn.execute(
-        """
-        INSERT INTO saved_influencers (user_id, influencer_id, created_at)
-        VALUES (?, ?, ?)
-        """,
-        (user_id, influencer_id, datetime.utcnow().isoformat())
-    )
-    conn.commit()
-    conn.close()
+    supabase.table("saved_influencers").insert({
+        "user_id": user["id"],
+        "influencer_id": influencer_id,
+        "created_at": datetime.utcnow().isoformat()
+    }).execute()
 
     return {"status": "saved"}
 
@@ -65,20 +64,18 @@ def save_influencer(
 @router.delete("/{influencer_id}")
 def remove_saved(
     influencer_id: int,
-    user_id: str = Depends(get_current_user)
+    user=Depends(get_current_user)
 ):
-    conn = get_db()
-    cur = conn.execute(
-        """
-        DELETE FROM saved_influencers
-        WHERE influencer_id = ? AND user_id = ?
-        """,
-        (influencer_id, user_id)
+    response = (
+        get_supabase()
+        .table("saved_influencers")
+        .delete()
+        .eq("user_id", user["id"])
+        .eq("influencer_id", influencer_id)
+        .execute()
     )
-    conn.commit()
-    conn.close()
 
-    if cur.rowcount == 0:
+    if not response.data:
         raise HTTPException(status_code=404, detail="Not found")
 
     return {"status": "removed"}
