@@ -20,11 +20,15 @@ app = FastAPI(
 )
 
 # ------------------------------------
-# CORS (SAFE DEFAULT)
+# ✅ CORS (PROD SAFE — FIXED)
 # ------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten later if needed
+    allow_origins=[
+        "https://2b7553ca.influencer-platform-3u1.pages.dev",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
