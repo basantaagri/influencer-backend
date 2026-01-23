@@ -2,7 +2,17 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from app.db import get_supabase
 
-router = APIRouter(prefix="/influencers", tags=["Influencers"])
+# -------------------------------------------------
+# ROUTER
+# NOTE:
+# This router is mounted at:
+#   /influencers
+# in main.py
+# -------------------------------------------------
+router = APIRouter(
+    prefix="/influencers",
+    tags=["Influencers"],
+)
 
 # -------------------------------------------------
 # GET /influencers
@@ -26,7 +36,7 @@ def list_influencers(
 
     query = supabase.table("influencers").select("*")
 
-    # ✅ IGNORE "All" FILTERS (CRITICAL FIX)
+    # ✅ IGNORE "All" FILTERS (CRITICAL)
     if platform and platform != "All":
         query = query.eq("platform", platform)
 
@@ -38,7 +48,7 @@ def list_influencers(
 
     res = query.range(offset, offset + limit - 1).execute()
 
-    # Frontend expects ARRAY ONLY
+    # ✅ FRONTEND GUARANTEE — ALWAYS ARRAY
     return res.data or []
 
 
@@ -76,7 +86,7 @@ def create_influencer(payload: dict):
 
 
 # -------------------------------------------------
-# GET /influencers/{id}
+# GET /influencers/{influencer_id}
 # Fetch single influencer
 # -------------------------------------------------
 @router.get("/{influencer_id}")
@@ -99,7 +109,7 @@ def get_influencer(influencer_id: int):
 
 
 # -------------------------------------------------
-# PATCH /influencers/{id}
+# PATCH /influencers/{influencer_id}
 # Update influencer
 # -------------------------------------------------
 @router.patch("/{influencer_id}")
@@ -124,7 +134,7 @@ def update_influencer(influencer_id: int, payload: dict):
 
 
 # -------------------------------------------------
-# DELETE /influencers/{id}
+# DELETE /influencers/{influencer_id}
 # -------------------------------------------------
 @router.delete("/{influencer_id}")
 def delete_influencer(influencer_id: int):
