@@ -11,7 +11,7 @@ router = APIRouter(
 )
 
 # -------------------------------------------------
-# AUDIENCE SIGNAL (DERIVED — NOT STORED)
+# AUDIENCE SIGNAL (EXISTING — KEEP)
 # -------------------------------------------------
 def get_audience_signal(engagement_rate: Optional[float]):
     if engagement_rate is None:
@@ -27,6 +27,76 @@ def get_audience_signal(engagement_rate: Optional[float]):
         return {"status": "Uncertain", "confidence": "Low"}
 
     return {"status": "Needs Review", "confidence": "Low"}
+
+
+# -------------------------------------------------
+# MULTI-SIGNAL AUDIT (DERIVED ONLY)
+# -------------------------------------------------
+def get_audit_signals(inf: dict):
+    followers = inf.get("followers") or 0
+    avg_views = inf.get("avg_views") or 0
+    engagement_rate = inf.get("engagement_rate")
+
+    # Reach ratio (safe)
+    reach_ratio = None
+    if followers > 0 and avg_views > 0:
+        reach_ratio = round(avg_views / followers, 2)
+
+    # Consistency heuristic
+    if engagement_rate is None:
+        consistency = "unknown"
+    elif engagement_rate >= 2.5:
+        consistency = "stable"
+    else:
+        consistency = "uncertain"
+
+    return {
+        "engagement": engagement_rate,
+        "reach_ratio": reach_ratio,
+        "consistency": consistency,
+    }
+
+
+# -------------------------------------------------
+# 🔥 AUDIT SCORE RECOMPOSITION (DERIVED)
+# -------------------------------------------------
+def recompute_audit_score(base_score: Optional[int], signals: dict):
+    if base_score is None:
+        return None
+
+    score = base_score
+
+    # Reach efficiency bonus
+    rr = signals.get("reach_ratio")
+    if rr is not None:
+        if rr >= 0.6:
+            score += 15
+        elif rr >= 0.4:
+            score += 10
+        elif rr >= 0.2:
+            score += 5
+
+    # Consistency penalty
+    consistency = signals.get("consistency")
+    if consistency == "uncertain":
+        score -= 10
+    elif consistency == "unknown":
+        score -= 5
+
+    return max(0, min(100, score))
+
+
+# -------------------------------------------------
+# ✅ CONFIDENCE TIER (NEW — SAFE, DERIVED)
+# -------------------------------------------------
+def get_confidence_tier(score: Optional[int]):
+    if score is None:
+        return "Unknown"
+    if score >= 80:
+        return "High"
+    if score >= 60:
+        return "Medium"
+    return "Low"
 
 
 # -------------------------------------------------
@@ -57,7 +127,6 @@ def list_influencers(
     if niche and niche != "All":
         query = query.eq("niche", niche)
 
-    # Engagement buckets
     if engagement and engagement != "All":
         if engagement == "High":
             query = query.gte("engagement_rate", 4.0)
@@ -66,9 +135,6 @@ def list_influencers(
         elif engagement == "Low":
             query = query.lt("engagement_rate", 2.5)
 
-    # -----------------------
-    # AUDIT FILTER (NUMERIC)
-    # -----------------------
     if audit and audit != "All":
         if audit == "Good":
             query = query.gte("audit_score_num", 70)
@@ -77,7 +143,6 @@ def list_influencers(
         elif audit == "High Risk":
             query = query.lt("audit_score_num", 50)
 
-    # Price buckets
     if price and price != "All":
         if price == "Low":
             query = query.lt("price", 3000)
@@ -87,7 +152,7 @@ def list_influencers(
             query = query.gt("price", 6000)
 
     # -----------------------
-    # SORTING (RECOMMENDED)
+    # SORTING
     # -----------------------
     if sort == "Price Low to High":
         query = query.order("price", desc=False)
@@ -107,12 +172,21 @@ def list_influencers(
     data = res.data or []
 
     # -----------------------
-    # DERIVED FIELDS
+    # DERIVED ENRICHMENT
     # -----------------------
     for inf in data:
+        signals = get_audit_signals(inf)
+        final_score = recompute_audit_score(
+            inf.get("audit_score_num"),
+            signals
+        )
+
         inf["audience_signal"] = get_audience_signal(
             inf.get("engagement_rate")
         )
+        inf["audit_signals"] = signals
+        inf["final_audit_score"] = final_score
+        inf["confidence_tier"] = get_confidence_tier(final_score)
         inf["content_category"] = inf.get("content_category")
 
     return data
@@ -138,9 +212,18 @@ def get_influencer(influencer_id: int):
         raise HTTPException(status_code=404, detail="Influencer not found")
 
     data = res.data
+    signals = get_audit_signals(data)
+    final_score = recompute_audit_score(
+        data.get("audit_score_num"),
+        signals
+    )
+
     data["audience_signal"] = get_audience_signal(
         data.get("engagement_rate")
     )
+    data["audit_signals"] = signals
+    data["final_audit_score"] = final_score
+    data["confidence_tier"] = get_confidence_tier(final_score)
     data["content_category"] = data.get("content_category")
 
     return data
