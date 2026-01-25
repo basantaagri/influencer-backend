@@ -20,7 +20,7 @@ app = FastAPI(
 )
 
 # ------------------------------------
-# ✅ CORS (PROD SAFE — FIXED)
+# CORS (PROD SAFE)
 # ------------------------------------
 app.add_middleware(
     CORSMiddleware,
@@ -39,40 +39,26 @@ app.add_middleware(
 # ------------------------------------
 
 # ✅ Influencers (CORE – PUBLIC)
-app.include_router(
-    influencers.router,
-    prefix="/influencers",
-    tags=["Influencers"],
-)
+# 🔒 PREFIX IS DEFINED INSIDE routes/influencers.py
+app.include_router(influencers.router)
 
 # ✅ Saved Influencers (JWT PROTECTED)
-app.include_router(
-    saved.router,
-)
+app.include_router(saved.router)
 
 # ✅ Reveal Influencer (JWT PROTECTED)
-app.include_router(
-    reveal.router,
-)
+app.include_router(reveal.router)
 
 # ✅ Credits (JWT PROTECTED)
-app.include_router(
-    credits.router,
-)
+app.include_router(credits.router)
 
 # 🔒 Seed DISABLED (SECURITY)
-# app.include_router(
-#     seed.router,
-#     tags=["Seed"],
-# )
+# app.include_router(seed.router)
 
 # ✅ Audit (SAFE / STUBBED)
-app.include_router(
-    audit.router,
-)
+app.include_router(audit.router)
 
 # ------------------------------------
-# HEALTH & AUTH CHECKS (REQUIRED)
+# HEALTH & AUTH CHECKS
 # ------------------------------------
 @app.get("/")
 def root():
@@ -89,7 +75,6 @@ def auth_me():
     """
     TEMP SAFE STUB
     Frontend expects this endpoint.
-    Real JWT logic can be added later.
     """
     return {
         "id": None,
