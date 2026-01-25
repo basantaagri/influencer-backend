@@ -20,12 +20,18 @@ app = FastAPI(
 )
 
 # ------------------------------------
-# CORS (PROD SAFE)
+# CORS (PROD SAFE — FIXED, NO GUESSING)
 # ------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://2b7553ca.influencer-platform-3u1.pages.dev",
+        # ✅ ACTUAL Cloudflare Pages production URL
+        "https://daf8848f.influencer-platform-3u1.pages.dev",
+
+        # ✅ Backend itself (safe, avoids edge cases)
+        "https://influencer-backend-supl.onrender.com",
+
+        # ✅ Local dev
         "http://localhost:5173",
         "http://localhost:3000",
     ],

@@ -15,52 +15,31 @@ router = APIRouter(
 # -------------------------------------------------
 def get_audience_signal(engagement_rate: Optional[float]):
     if engagement_rate is None:
-        return {
-            "status": "Needs Review",
-            "confidence": "Low",
-        }
+        return {"status": "Needs Review", "confidence": "Low"}
 
     if engagement_rate >= 4.0:
-        return {
-            "status": "Likely Genuine",
-            "confidence": "High",
-        }
+        return {"status": "Likely Genuine", "confidence": "High"}
 
     if engagement_rate >= 2.0:
-        return {
-            "status": "Likely Genuine",
-            "confidence": "Medium",
-        }
+        return {"status": "Likely Genuine", "confidence": "Medium"}
 
     if engagement_rate >= 1.0:
-        return {
-            "status": "Uncertain",
-            "confidence": "Low",
-        }
+        return {"status": "Uncertain", "confidence": "Low"}
 
-    return {
-        "status": "Needs Review",
-        "confidence": "Low",
-    }
+    return {"status": "Needs Review", "confidence": "Low"}
 
 
 # -------------------------------------------------
 # GET /influencers
-# List influencers with filters + pagination
-# RETURNS: always array (frontend safe)
 # -------------------------------------------------
 @router.get("/")
 def list_influencers(
     platform: Optional[str] = Query(None),
     niche: Optional[str] = Query(None),
-
-    # FILTERS (frontend compatible)
     engagement: Optional[str] = Query(None),
     audit: Optional[str] = Query(None),
     price: Optional[str] = Query(None),
     sort: Optional[str] = Query("recommended"),
-
-    # Pagination
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=50),
 ):
@@ -70,7 +49,7 @@ def list_influencers(
     query = supabase.table("influencers").select("*")
 
     # -----------------------
-    # FILTERS (IGNORE "All")
+    # FILTERS
     # -----------------------
     if platform and platform != "All":
         query = query.eq("platform", platform)
@@ -87,9 +66,16 @@ def list_influencers(
         elif engagement == "Low":
             query = query.lt("engagement_rate", 2.5)
 
-    # Audit score filter
+    # -----------------------
+    # AUDIT FILTER (NUMERIC)
+    # -----------------------
     if audit and audit != "All":
-        query = query.eq("audit_score", audit)
+        if audit == "Good":
+            query = query.gte("audit_score_num", 70)
+        elif audit == "Medium Risk":
+            query = query.gte("audit_score_num", 50).lt("audit_score_num", 70)
+        elif audit == "High Risk":
+            query = query.lt("audit_score_num", 50)
 
     # Price buckets
     if price and price != "All":
@@ -101,7 +87,7 @@ def list_influencers(
             query = query.gt("price", 6000)
 
     # -----------------------
-    # SORTING
+    # SORTING (RECOMMENDED)
     # -----------------------
     if sort == "Price Low to High":
         query = query.order("price", desc=False)
@@ -110,21 +96,23 @@ def list_influencers(
     elif sort == "Engagement":
         query = query.order("engagement_rate", desc=True)
     else:
-        # Recommended (default)
-        query = query.order("audit_score", desc=True).order("followers", desc=True)
+        query = (
+            query
+            .order("audit_score_num", desc=True)
+            .order("engagement_rate", desc=True)
+            .order("followers", desc=True)
+        )
 
     res = query.range(offset, offset + per_page - 1).execute()
     data = res.data or []
 
-    # -------------------------------------------------
-    # ADD AUDIENCE SIGNAL (SAFE, DERIVED)
-    # -------------------------------------------------
+    # -----------------------
+    # DERIVED FIELDS
+    # -----------------------
     for inf in data:
         inf["audience_signal"] = get_audience_signal(
             inf.get("engagement_rate")
         )
-
-        # classification only (nullable, no inference)
         inf["content_category"] = inf.get("content_category")
 
     return data
@@ -150,12 +138,9 @@ def get_influencer(influencer_id: int):
         raise HTTPException(status_code=404, detail="Influencer not found")
 
     data = res.data
-
     data["audience_signal"] = get_audience_signal(
         data.get("engagement_rate")
     )
-
-    # classification only
     data["content_category"] = data.get("content_category")
 
     return data
@@ -163,7 +148,6 @@ def get_influencer(influencer_id: int):
 
 # -------------------------------------------------
 # POST /influencers
-# Create influencer
 # -------------------------------------------------
 @router.post("/")
 def create_influencer(payload: dict):
@@ -177,6 +161,7 @@ def create_influencer(payload: dict):
         "engagement_rate",
         "price",
         "audit_score",
+        "audit_score_num",
     ]
 
     for field in required_fields:
@@ -186,7 +171,6 @@ def create_influencer(payload: dict):
                 detail=f"Missing required field: {field}",
             )
 
-    # content_category is OPTIONAL (classification only)
     res = supabase.table("influencers").insert(payload).execute()
 
     return {
